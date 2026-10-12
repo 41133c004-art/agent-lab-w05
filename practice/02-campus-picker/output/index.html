@@ -36,6 +36,7 @@
     font-size: 0.9rem;
   }
   button.primary { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+  button.danger { color: #b42318; border-color: #b42318; }
   button:hover { filter: brightness(0.96); }
   .result {
     min-height: 64px;
@@ -101,6 +102,7 @@
   <div class="buttons">
     <button id="pickBtn" class="primary" type="button">Pick for me</button>
     <button id="resetFiltersBtn" type="button">Reset filters</button>
+    <button id="clearHistoryBtn" class="danger" type="button">Clear history</button>
   </div>
 </div>
 
@@ -138,7 +140,7 @@ const STRINGS = {
     langToggle: "中文", labelLocation: "Location", labelMinutes: "Max minutes", labelEnergy: "Energy",
     optLocationAny: "Any", optLocationIndoor: "Indoor", optLocationOutdoor: "Outdoor",
     optMinutesAny: "Any", optEnergyAny: "Any", optEnergyLow: "Low", optEnergyMedium: "Medium",
-    pickBtn: "Pick for me", resetFiltersBtn: "Reset filters",
+    pickBtn: "Pick for me", resetFiltersBtn: "Reset filters", clearHistoryBtn: "Clear history",
     resultHeading: "Result", historyHeading: "History", historyEmpty: "No picks yet.",
     noMatch: "No activity matches these filters. Try loosening one.", noPickYet: "No pick yet.",
     minutesLabel: "min", energyLabel: { low: "low", medium: "medium" },
@@ -149,7 +151,7 @@ const STRINGS = {
     langToggle: "English", labelLocation: "地點", labelMinutes: "最長分鐘", labelEnergy: "強度",
     optLocationAny: "不限", optLocationIndoor: "室內", optLocationOutdoor: "室外",
     optMinutesAny: "不限", optEnergyAny: "不限", optEnergyLow: "低", optEnergyMedium: "中",
-    pickBtn: "幫我選", resetFiltersBtn: "重設篩選",
+    pickBtn: "幫我選", resetFiltersBtn: "重設篩選", clearHistoryBtn: "清除歷史",
     resultHeading: "結果", historyHeading: "歷史紀錄", historyEmpty: "還沒有抽選紀錄。",
     noMatch: "沒有符合篩選條件的活動，試著放寬一項條件。", noPickYet: "還沒有抽選結果。",
     minutesLabel: "分鐘", energyLabel: { low: "低", medium: "中" },
@@ -179,6 +181,7 @@ function applyStaticText() {
   document.getElementById("optEnergyMedium").textContent = s.optEnergyMedium;
   document.getElementById("pickBtn").textContent = s.pickBtn;
   document.getElementById("resetFiltersBtn").textContent = s.resetFiltersBtn;
+  document.getElementById("clearHistoryBtn").textContent = s.clearHistoryBtn;
   document.getElementById("resultHeading").textContent = s.resultHeading;
   document.getElementById("historyHeading").textContent = s.historyHeading;
   renderResult(lastPick);
@@ -264,8 +267,16 @@ function resetFilters() {
   document.getElementById("filterEnergy").value = "any";
 }
 
+function clearHistory() {
+  // Manual, explicit action — separate from resetFilters so resetting filters
+  // never silently wipes a user's pick history.
+  history = [];
+  renderHistory();
+}
+
 document.getElementById("pickBtn").addEventListener("click", pick);
 document.getElementById("resetFiltersBtn").addEventListener("click", resetFilters);
+document.getElementById("clearHistoryBtn").addEventListener("click", clearHistory);
 document.getElementById("langToggle").addEventListener("click", () => {
   lang = lang === "en" ? "zh" : "en";
   applyStaticText();
