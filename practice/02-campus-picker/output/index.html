@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Activity Picker</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    background: #f7f7f5;
+    color: #1f2328;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .sub { color: #555; font-size: 0.9rem; margin-bottom: 20px; }
+  .panel {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+  select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; min-width: 120px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  button {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #888;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  button.primary { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+  button:hover { filter: brightness(0.96); }
+  .result {
+    min-height: 64px;
+    border-radius: 8px;
+    background: #eef6ff;
+    border: 1px dashed #9ec2f2;
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+  .result.empty { color: #777; font-style: italic; }
+  .history-list { list-style: none; margin: 0; padding: 0; font-size: 0.9rem; }
+  .history-list li {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+  }
+  .history-list li:last-child { border-bottom: none; }
+  .badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: #eee;
+    margin-left: 6px;
+  }
+  .lang-toggle { float: right; }
+</style>
+</head>
+<body>
+
+<button id="langToggle" class="lang-toggle" type="button">中文</button>
+<h1 id="title">Campus Activity Picker</h1>
+<p class="sub" id="subtitle">Filter, then let the picker choose one activity for you.</p>
+
+<div class="panel">
+  <div class="row">
+    <div class="field">
+      <label id="labelLocation" for="filterLocation">Location</label>
+      <select id="filterLocation">
+        <option value="any" id="optLocationAny">Any</option>
+        <option value="indoor" id="optLocationIndoor">Indoor</option>
+        <option value="outdoor" id="optLocationOutdoor">Outdoor</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="labelMinutes" for="filterMinutes">Max minutes</label>
+      <select id="filterMinutes">
+        <option value="any" id="optMinutesAny">Any</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+        <option value="60">60</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="labelEnergy" for="filterEnergy">Energy</label>
+      <select id="filterEnergy">
+        <option value="any" id="optEnergyAny">Any</option>
+        <option value="low" id="optEnergyLow">Low</option>
+        <option value="medium" id="optEnergyMedium">Medium</option>
+      </select>
+    </div>
+  </div>
+  <div class="buttons">
+    <button id="pickBtn" class="primary" type="button">Pick for me</button>
+    <button id="resetFiltersBtn" type="button">Reset filters</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 id="resultHeading" style="margin-top:0; font-size:1rem;">Result</h2>
+  <div id="result" class="result empty">No pick yet.</div>
+</div>
+
+<div class="panel">
+  <h2 id="historyHeading" style="margin-top:0; font-size:1rem;">History</h2>
+  <ul id="historyList" class="history-list"></ul>
+  <p id="historyEmpty" class="sub" style="margin:4px 0 0;">No picks yet.</p>
+</div>
+
+<script>
+// Data mirrors practice/02-campus-picker/activities.json.
+const ACTIVITIES = [
+  { id: "A01", name_zh: "整理書包", name_en: "Organize your bag", location_type: "indoor", minutes: 10, energy: "low" },
+  { id: "A02", name_zh: "畫一張小卡", name_en: "Draw a small card", location_type: "indoor", minutes: 15, energy: "low" },
+  { id: "A03", name_zh: "寫三句讀書筆記", name_en: "Write three study notes", location_type: "indoor", minutes: 10, energy: "low" },
+  { id: "A04", name_zh: "安靜讀兩頁書", name_en: "Read two pages quietly", location_type: "indoor", minutes: 15, energy: "low" },
+  { id: "A05", name_zh: "排好明日待辦", name_en: "Plan tomorrow’s tasks", location_type: "indoor", minutes: 20, energy: "low" },
+  { id: "A06", name_zh: "整理本機練習檔", name_en: "Organize practice files", location_type: "indoor", minutes: 30, energy: "medium" },
+  { id: "A07", name_zh: "在合適位置慢走", name_en: "Take a gentle walk in a suitable area", location_type: "outdoor", minutes: 15, energy: "low" },
+  { id: "A08", name_zh: "觀察天空並畫草圖", name_en: "Observe the sky and sketch", location_type: "outdoor", minutes: 20, energy: "low" },
+  { id: "A09", name_zh: "在合適位置快走", name_en: "Take a brisk walk in a suitable area", location_type: "outdoor", minutes: 30, energy: "medium" },
+  { id: "A10", name_zh: "規劃小組練習", name_en: "Plan a group exercise", location_type: "indoor", minutes: 45, energy: "medium" },
+  { id: "A11", name_zh: "記錄自然色彩", name_en: "Record colors in nature", location_type: "outdoor", minutes: 45, energy: "low" },
+  { id: "A12", name_zh: "構思下一次社團活動", name_en: "Brainstorm a future club activity", location_type: "indoor", minutes: 60, energy: "medium" }
+];
+
+const STRINGS = {
+  en: {
+    title: "Campus Activity Picker", subtitle: "Filter, then let the picker choose one activity for you.",
+    langToggle: "中文", labelLocation: "Location", labelMinutes: "Max minutes", labelEnergy: "Energy",
+    optLocationAny: "Any", optLocationIndoor: "Indoor", optLocationOutdoor: "Outdoor",
+    optMinutesAny: "Any", optEnergyAny: "Any", optEnergyLow: "Low", optEnergyMedium: "Medium",
+    pickBtn: "Pick for me", resetFiltersBtn: "Reset filters",
+    resultHeading: "Result", historyHeading: "History", historyEmpty: "No picks yet.",
+    noMatch: "No activity matches these filters. Try loosening one.", noPickYet: "No pick yet.",
+    minutesLabel: "min", energyLabel: { low: "low", medium: "medium" },
+    locationLabel: { indoor: "indoor", outdoor: "outdoor" }
+  },
+  zh: {
+    title: "校園活動抽選器", subtitle: "先選篩選條件，再讓抽選器幫你挑一個活動。",
+    langToggle: "English", labelLocation: "地點", labelMinutes: "最長分鐘", labelEnergy: "強度",
+    optLocationAny: "不限", optLocationIndoor: "室內", optLocationOutdoor: "室外",
+    optMinutesAny: "不限", optEnergyAny: "不限", optEnergyLow: "低", optEnergyMedium: "中",
+    pickBtn: "幫我選", resetFiltersBtn: "重設篩選",
+    resultHeading: "結果", historyHeading: "歷史紀錄", historyEmpty: "還沒有抽選紀錄。",
+    noMatch: "沒有符合篩選條件的活動，試著放寬一項條件。", noPickYet: "還沒有抽選結果。",
+    minutesLabel: "分鐘", energyLabel: { low: "低", medium: "中" },
+    locationLabel: { indoor: "室內", outdoor: "室外" }
+  }
+};
+
+let lang = "en";
+let history = [];
+
+function t() { return STRINGS[lang]; }
+
+function applyStaticText() {
+  const s = t();
+  document.getElementById("title").textContent = s.title;
+  document.getElementById("subtitle").textContent = s.subtitle;
+  document.getElementById("langToggle").textContent = s.langToggle;
+  document.getElementById("labelLocation").textContent = s.labelLocation;
+  document.getElementById("labelMinutes").textContent = s.labelMinutes;
+  document.getElementById("labelEnergy").textContent = s.labelEnergy;
+  document.getElementById("optLocationAny").textContent = s.optLocationAny;
+  document.getElementById("optLocationIndoor").textContent = s.optLocationIndoor;
+  document.getElementById("optLocationOutdoor").textContent = s.optLocationOutdoor;
+  document.getElementById("optMinutesAny").textContent = s.optMinutesAny;
+  document.getElementById("optEnergyAny").textContent = s.optEnergyAny;
+  document.getElementById("optEnergyLow").textContent = s.optEnergyLow;
+  document.getElementById("optEnergyMedium").textContent = s.optEnergyMedium;
+  document.getElementById("pickBtn").textContent = s.pickBtn;
+  document.getElementById("resetFiltersBtn").textContent = s.resetFiltersBtn;
+  document.getElementById("resultHeading").textContent = s.resultHeading;
+  document.getElementById("historyHeading").textContent = s.historyHeading;
+  renderResult(lastPick);
+  renderHistory();
+}
+
+function getFilters() {
+  return {
+    location: document.getElementById("filterLocation").value,
+    minutes: document.getElementById("filterMinutes").value,
+    energy: document.getElementById("filterEnergy").value
+  };
+}
+
+function matches(activity, f) {
+  if (f.location !== "any" && activity.location_type !== f.location) return false;
+  if (f.energy !== "any" && activity.energy !== f.energy) return false;
+  if (f.minutes !== "any" && activity.minutes > Number(f.minutes)) return false;
+  return true;
+}
+
+function describe(activity) {
+  const s = t();
+  const name = lang === "zh" ? activity.name_zh : activity.name_en;
+  const loc = s.locationLabel[activity.location_type];
+  const energy = s.energyLabel[activity.energy];
+  return `${name} — ${loc}, ${activity.minutes} ${s.minutesLabel}, ${energy}`;
+}
+
+let lastPick = null;
+
+function renderResult(activity) {
+  const box = document.getElementById("result");
+  const s = t();
+  if (!activity) {
+    box.textContent = s.noPickYet;
+    box.classList.add("empty");
+    return;
+  }
+  box.classList.remove("empty");
+  box.textContent = describe(activity);
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+  const empty = document.getElementById("historyEmpty");
+  list.innerHTML = "";
+  if (history.length === 0) {
+    empty.style.display = "block";
+    empty.textContent = t().historyEmpty;
+    return;
+  }
+  empty.style.display = "none";
+  // Newest first.
+  for (let i = history.length - 1; i >= 0; i--) {
+    const li = document.createElement("li");
+    li.textContent = `${i + 1}. ${describe(history[i])}`;
+    list.appendChild(li);
+  }
+}
+
+function pick() {
+  const f = getFilters();
+  const pool = ACTIVITIES.filter(a => matches(a, f));
+  const box = document.getElementById("result");
+  if (pool.length === 0) {
+    lastPick = null;
+    box.classList.add("empty");
+    box.textContent = t().noMatch;
+    return;
+  }
+  const choice = pool[Math.floor(Math.random() * pool.length)];
+  lastPick = choice;
+  history.push(choice);
+  renderResult(choice);
+  renderHistory();
+}
+
+function resetFilters() {
+  // Only resets the filter controls. History is intentionally left untouched.
+  document.getElementById("filterLocation").value = "any";
+  document.getElementById("filterMinutes").value = "any";
+  document.getElementById("filterEnergy").value = "any";
+}
+
+document.getElementById("pickBtn").addEventListener("click", pick);
+document.getElementById("resetFiltersBtn").addEventListener("click", resetFilters);
+document.getElementById("langToggle").addEventListener("click", () => {
+  lang = lang === "en" ? "zh" : "en";
+  applyStaticText();
+});
+
+applyStaticText();
+</script>
+</body>
+</html>
